@@ -53,3 +53,32 @@ export async function obtenerDisponibilidad(
   ]);
   return rows.map((r) => ({ inicio: r.inicio.toISOString(), hora: r.hora }));
 }
+
+export type SlotConProfesionales = Slot & { profesionales: number[] };
+
+// "El primero disponible": junta los horarios de todos los profesionales
+// que hacen el servicio y recuerda quién está libre en cada horario.
+export async function obtenerDisponibilidadCualquiera(
+  servicioId: number,
+  fecha: string
+): Promise<SlotConProfesionales[]> {
+  const profesionales = await query<{ id: number }>(
+    `SELECT p.id
+       FROM profesionales p
+       JOIN profesional_servicios ps ON ps.profesional_id = p.id
+      WHERE ps.servicio_id = $1 AND p.activo
+      ORDER BY p.id`,
+    [servicioId]
+  );
+
+  const porHorario = new Map<string, SlotConProfesionales>();
+  for (const { id } of profesionales) {
+    const slots = await obtenerDisponibilidad(id, servicioId, fecha);
+    for (const s of slots) {
+      const existente = porHorario.get(s.inicio);
+      if (existente) existente.profesionales.push(id);
+      else porHorario.set(s.inicio, { ...s, profesionales: [id] });
+    }
+  }
+  return [...porHorario.values()].sort((a, b) => a.inicio.localeCompare(b.inicio));
+}
