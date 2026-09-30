@@ -1,6 +1,9 @@
 import { redirect } from "next/navigation";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 
-// Por ahora la raíz lleva a la reserva. Más adelante: si hay sesión del personal, va a la agenda.
-export default function Home() {
-  redirect("/reservar");
+// La raíz decide: el personal logueado va a la agenda, el resto a reservar
+export default async function Home() {
+  const session = await getServerSession(authOptions);
+  redirect(session ? "/admin" : "/reservar");
 }
