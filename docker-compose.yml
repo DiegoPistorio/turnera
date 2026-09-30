@@ -1,0 +1,20 @@
+services:
+  db:
+    image: postgres:16
+    container_name: turnera-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: turnera
+      POSTGRES_PASSWORD: turnera_dev
+      POSTGRES_DB: turnera
+      TZ: America/Argentina/Buenos_Aires
+      PGTZ: America/Argentina/Buenos_Aires
+    ports:
+      - "5433:5432"   # 5433 para no chocar con Rastrojero
+    volumes:
+      - turnera_data:/var/lib/postgresql/data
+      - ./db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./db/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql:ro
+
+volumes:
+  turnera_data:
