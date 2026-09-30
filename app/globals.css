@@ -1,23 +1,47 @@
 @import "tailwindcss";
 
+/* Paleta de The King Black Barber, tomada del logo */
 @theme inline {
-  --color-papel: #f6f4f8;
-  --color-tinta: #211a26;
-  --color-gris: #6e6573;
-  --color-linea: #e3dde6;
-  --color-ciruela: #6d2e6b;
-  --color-ciruela-suave: #efe4ee;
-  --font-sans: var(--font-bricolage), system-ui, sans-serif;
+  --color-fondo: #000000;
+  --color-superficie: #121212;
+  --color-borde: #2b2b2b;
+  --color-texto: #f4efe3;
+  --color-suave: #a8a298;
+  --color-acento: #ddbe41; /* dorado de la corona */
+  --color-acento-suave: #2b2410;
+  --color-sobre-acento: #000000;
+  --color-peligro: #f0625a;
+  --color-peligro-suave: #3a1210;
+  --color-poste-rojo: #d22e24;
+  --color-poste-azul: #2a3cf0;
+
+  --font-sans: var(--font-barlow), system-ui, sans-serif;
+  --font-titulo: var(--font-barlow-condensed), var(--font-barlow), sans-serif;
+}
+
+html {
+  color-scheme: dark; /* calendario, reloj y scroll nativos en oscuro */
 }
 
 html,
 body {
-  background: var(--color-papel);
-  color: var(--color-tinta);
+  background: var(--color-fondo);
+  color: var(--color-texto);
 }
 
 body {
   -webkit-tap-highlight-color: transparent;
+}
+
+/* Franjas del poste de barbero: barra de progreso de la reserva */
+.poste {
+  background: repeating-linear-gradient(
+    -45deg,
+    var(--color-poste-rojo) 0 5px,
+    var(--color-texto) 5px 10px,
+    var(--color-poste-azul) 10px 15px,
+    var(--color-texto) 15px 20px
+  );
 }
 
 /* Carrusel de días sin barra de scroll visible */

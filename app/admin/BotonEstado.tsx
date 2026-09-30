@@ -25,7 +25,7 @@ export function BotonEstado({ id, estado, texto, confirmar, peligro }: Props) {
         });
       }}
       className={`h-10 rounded-xl border px-4 text-sm font-semibold disabled:opacity-50 ${
-        peligro ? "border-red-200 bg-white text-red-700 active:bg-red-50" : "border-linea bg-white active:bg-ciruela-suave"
+        peligro ? "border-peligro/40 bg-superficie text-peligro active:bg-peligro-suave" : "border-borde bg-superficie active:bg-acento-suave"
       }`}
     >
       {pendiente ? "Guardando…" : texto}

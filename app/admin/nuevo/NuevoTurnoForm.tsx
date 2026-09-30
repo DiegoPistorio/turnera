@@ -9,7 +9,7 @@ export type Profesional = { id: number; nombre: string; color: string; servicios
 type Slot = { inicio: string; hora: string };
 
 const campo =
-  "mt-1.5 h-13 w-full rounded-xl border border-linea bg-white px-4 text-lg outline-none focus:border-ciruela focus:ring-2 focus:ring-ciruela/20";
+  "mt-1.5 h-13 w-full rounded-xl border border-borde bg-superficie px-4 text-lg outline-none focus:border-acento focus:ring-2 focus:ring-acento/20";
 
 function Opcion({ activa, onClick, children }: { activa: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
@@ -18,7 +18,7 @@ function Opcion({ activa, onClick, children }: { activa: boolean; onClick: () =>
       onClick={onClick}
       aria-pressed={activa}
       className={`rounded-xl border px-4 py-2.5 text-left transition-colors ${
-        activa ? "border-ciruela bg-ciruela text-white" : "border-linea bg-white active:bg-ciruela-suave"
+        activa ? "border-acento bg-acento text-sobre-acento" : "border-borde bg-superficie active:bg-acento-suave"
       }`}
     >
       {children}
@@ -122,11 +122,11 @@ export function NuevoTurnoForm({
             value={telefono}
             onChange={(e) => setTelefono(e.target.value)}
             placeholder="11 2345 6789"
-            className={`${campo} placeholder:text-gris/50`}
+            className={`${campo} placeholder:text-suave/50`}
           />
         </label>
         {conocido && (
-          <p className="mt-2 text-sm text-ciruela">
+          <p className="mt-2 text-sm text-acento">
             Ya es cliente{conocido.turnos > 0 ? `, vino ${conocido.turnos === 1 ? "1 vez" : `${conocido.turnos} veces`}` : ""}.
           </p>
         )}
@@ -216,11 +216,11 @@ export function NuevoTurnoForm({
             />
           </label>
         ) : !servicioId || !profesionalId ? (
-          <p className="mt-4 text-sm text-gris">Elegí servicio y profesional para ver los horarios libres.</p>
+          <p className="mt-4 text-sm text-suave">Elegí servicio y profesional para ver los horarios libres.</p>
         ) : slots === null ? (
-          <p className="mt-4 text-sm text-gris">Buscando horarios…</p>
+          <p className="mt-4 text-sm text-suave">Buscando horarios…</p>
         ) : slots.length === 0 ? (
-          <p className="mt-4 text-sm text-gris">No quedan horarios libres ese día. Probá con otro día o con Otra hora.</p>
+          <p className="mt-4 text-sm text-suave">No quedan horarios libres ese día. Probá con otro día o con Otra hora.</p>
         ) : (
           <div className="mt-4 grid grid-cols-4 gap-2">
             {slots.map((s) => (
@@ -230,7 +230,7 @@ export function NuevoTurnoForm({
                 onClick={() => setHora(s.hora)}
                 aria-pressed={hora === s.hora}
                 className={`h-11 rounded-xl border font-semibold tabular-nums ${
-                  hora === s.hora ? "border-ciruela bg-ciruela text-white" : "border-linea bg-white"
+                  hora === s.hora ? "border-acento bg-acento text-sobre-acento" : "border-borde bg-superficie"
                 }`}
               >
                 {s.hora}
@@ -243,31 +243,31 @@ export function NuevoTurnoForm({
       <section>
         <label className="block">
           <span className="text-lg font-semibold">Notas</span>
-          <span className="ml-2 text-sm text-gris">opcional</span>
+          <span className="ml-2 text-sm text-suave">opcional</span>
           <textarea
             value={notas}
             onChange={(e) => setNotas(e.target.value)}
             rows={3}
             placeholder="Por ejemplo: trae foto del color que quiere"
-            className="mt-3 w-full rounded-xl border border-linea bg-white px-4 py-3 text-lg outline-none placeholder:text-gris/50 focus:border-ciruela focus:ring-2 focus:ring-ciruela/20"
+            className="mt-3 w-full rounded-xl border border-borde bg-superficie px-4 py-3 text-lg outline-none placeholder:text-suave/50 focus:border-acento focus:ring-2 focus:ring-acento/20"
           />
         </label>
       </section>
 
       <div
-        className="fixed inset-x-0 bottom-0 border-t border-linea bg-papel/95 px-5 pt-3 backdrop-blur"
+        className="fixed inset-x-0 bottom-0 border-t border-borde bg-fondo/95 px-5 pt-3 backdrop-blur"
         style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
       >
         <div className="mx-auto max-w-2xl">
           {error && (
-            <p role="alert" className="mb-3 rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-800">
+            <p role="alert" className="mb-3 rounded-xl bg-peligro-suave px-4 py-3 text-sm font-medium text-peligro">
               {error}
             </p>
           )}
           <button
             onClick={guardar}
             disabled={guardando}
-            className="h-14 w-full rounded-2xl bg-ciruela text-lg font-semibold text-white transition-transform active:scale-[0.98] disabled:opacity-60"
+            className="h-14 w-full rounded-2xl bg-acento text-lg font-semibold text-sobre-acento transition-transform active:scale-[0.98] disabled:opacity-60"
           >
             {guardando ? "Guardando…" : hora ? `Guardar turno de las ${hora}` : "Guardar turno"}
           </button>

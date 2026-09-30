@@ -33,11 +33,11 @@ export default async function NuevoTurnoPage({ searchParams }: { searchParams: P
         <Link
           href={`/admin?fecha=${fecha}`}
           aria-label="Volver a la agenda"
-          className="-ml-3 grid size-10 place-items-center rounded-full text-3xl leading-none active:bg-ciruela-suave"
+          className="-ml-3 grid size-10 place-items-center rounded-full text-3xl leading-none active:bg-acento-suave"
         >
           ‹
         </Link>
-        <h1 className="text-[1.75rem] font-bold tracking-tight">Nuevo turno</h1>
+        <h1 className="text-[1.75rem] font-titulo font-bold tracking-tight">Nuevo turno</h1>
       </div>
       <NuevoTurnoForm servicios={servicios} profesionales={profesionales} fechaInicial={fecha} />
     </main>

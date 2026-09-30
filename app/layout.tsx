@@ -1,11 +1,18 @@
 import type { Metadata, Viewport } from "next";
-import { Bricolage_Grotesque } from "next/font/google";
+import { Barlow, Barlow_Condensed } from "next/font/google";
 import { NEGOCIO } from "@/lib/config";
 import "./globals.css";
 
-const bricolage = Bricolage_Grotesque({
+const barlow = Barlow({
   subsets: ["latin"],
-  variable: "--font-bricolage",
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-barlow",
+});
+
+const barlowCondensed = Barlow_Condensed({
+  subsets: ["latin"],
+  weight: ["600", "700"],
+  variable: "--font-barlow-condensed",
 });
 
 export const metadata: Metadata = {
@@ -17,12 +24,12 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: "#f6f4f8",
+  themeColor: "#000000",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="es" className={bricolage.variable}>
+    <html lang="es" className={`${barlow.variable} ${barlowCondensed.variable}`}>
       <body className="font-sans antialiased">{children}</body>
     </html>
   );

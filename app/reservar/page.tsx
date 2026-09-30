@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { NEGOCIO } from "@/lib/config";
+import { Marca } from "@/components/Marca";
 
 type Servicio = {
   id: number;
@@ -168,25 +169,25 @@ export default function ReservarPage() {
   return (
     <main className="mx-auto min-h-dvh max-w-md pb-36">
       <header
-        className="sticky top-0 z-10 bg-papel/95 px-5 pb-4 backdrop-blur"
+        className="sticky top-0 z-10 bg-fondo/95 px-5 pb-4 backdrop-blur"
         style={{ paddingTop: "max(1rem, env(safe-area-inset-top))" }}
       >
-        <div className="flex h-10 items-center gap-1">
+        <div className="flex h-10 items-center gap-2">
           {paso > 0 && (
             <button
               onClick={volver}
               aria-label="Volver"
-              className="-ml-3 grid size-10 place-items-center rounded-full text-3xl leading-none active:bg-ciruela-suave"
+              className="-ml-3 grid size-10 place-items-center rounded-full text-3xl leading-none active:bg-acento-suave"
             >
               ‹
             </button>
           )}
-          <span className="text-sm font-medium text-gris">{NEGOCIO.nombre}</span>
+          <Marca />
         </div>
-        <h1 className="mt-1 text-[2rem] font-bold leading-tight tracking-tight">{TITULOS[paso]}</h1>
+        <h1 className="mt-1 text-[2rem] font-titulo font-bold leading-tight tracking-tight">{TITULOS[paso]}</h1>
         <div className="mt-4 flex gap-1.5" role="progressbar" aria-valuenow={paso + 1} aria-valuemin={1} aria-valuemax={4}>
           {TITULOS.map((t, i) => (
-            <span key={t} className={`h-1 flex-1 rounded-full ${i <= paso ? "bg-ciruela" : "bg-linea"}`} />
+            <span key={t} className={`h-1.5 flex-1 rounded-full ${i <= paso ? "poste" : "bg-borde"}`} />
           ))}
         </div>
       </header>
@@ -200,7 +201,7 @@ export default function ReservarPage() {
         ) : servicios.length === 0 ? (
           <Vacio texto="Todavía no hay servicios para reservar." />
         ) : (
-          <ul className="divide-y divide-linea border-y border-linea bg-white">
+          <ul className="divide-y divide-borde border-y border-borde bg-superficie">
             {servicios.map((s) => (
               <li key={s.id}>
                 <button
@@ -210,11 +211,11 @@ export default function ReservarPage() {
                     setSlot(null);
                     setPaso(1);
                   }}
-                  className="flex w-full items-center gap-4 px-5 py-4 text-left active:bg-ciruela-suave"
+                  className="flex w-full items-center gap-4 px-5 py-4 text-left active:bg-acento-suave"
                 >
                   <div className="flex-1">
                     <p className="text-lg font-semibold">{s.nombre}</p>
-                    <p className="text-sm text-gris">
+                    <p className="text-sm text-suave">
                       {s.duracion_min} min{s.descripcion ? `, ${s.descripcion.toLowerCase()}` : ""}
                     </p>
                   </div>
@@ -232,7 +233,7 @@ export default function ReservarPage() {
         ) : profesionales.length === 0 ? (
           <Vacio texto="Nadie hace este servicio por ahora. Elegí otro." />
         ) : (
-          <ul className="divide-y divide-linea border-y border-linea bg-white">
+          <ul className="divide-y divide-borde border-y border-borde bg-superficie">
             {[CUALQUIERA, ...profesionales].map((p) => (
               <li key={p.id}>
                 <button
@@ -242,10 +243,10 @@ export default function ReservarPage() {
                     setError(null);
                     setPaso(2);
                   }}
-                  className="flex w-full items-center gap-4 px-5 py-4 text-left active:bg-ciruela-suave"
+                  className="flex w-full items-center gap-4 px-5 py-4 text-left active:bg-acento-suave"
                 >
                   {p.id === 0 ? (
-                    <span className="grid size-12 place-items-center rounded-full border-2 border-dashed border-ciruela text-xl text-ciruela">
+                    <span className="grid size-12 place-items-center rounded-full border-2 border-dashed border-acento text-xl text-acento">
                       ?
                     </span>
                   ) : (
@@ -258,7 +259,7 @@ export default function ReservarPage() {
                   )}
                   <div>
                     <p className="text-lg font-semibold">{p.nombre}</p>
-                    {p.id === 0 && <p className="text-sm text-gris">Te mostramos todos los horarios libres</p>}
+                    {p.id === 0 && <p className="text-sm text-suave">Te mostramos todos los horarios libres</p>}
                   </div>
                 </button>
               </li>
@@ -281,7 +282,7 @@ export default function ReservarPage() {
                   }}
                   aria-pressed={activo}
                   className={`flex w-16 shrink-0 snap-start flex-col items-center rounded-2xl border py-2.5 transition-colors ${
-                    activo ? "border-ciruela bg-ciruela text-white" : "border-linea bg-white"
+                    activo ? "border-acento bg-acento text-sobre-acento" : "border-borde bg-superficie"
                   }`}
                 >
                   <span className="text-xs first-letter:uppercase">{d.etiqueta}</span>
@@ -291,7 +292,7 @@ export default function ReservarPage() {
             })}
           </div>
 
-          <p className="mt-5 px-5 text-sm text-gris first-letter:uppercase">
+          <p className="mt-5 px-5 text-sm text-suave first-letter:uppercase">
             {fechaLarga(fecha)}, {servicio?.nombre.toLowerCase()} con{" "}
             {profesional?.id === 0 ? "quien esté libre" : profesional?.nombre}
           </p>
@@ -309,7 +310,7 @@ export default function ReservarPage() {
                 .filter((g) => g.lista.length > 0)
                 .map((g) => (
                   <div key={g.titulo}>
-                    <h2 className="mb-2 text-sm font-semibold text-gris">{g.titulo}</h2>
+                    <h2 className="mb-2 text-sm font-semibold text-suave">{g.titulo}</h2>
                     <div className="grid grid-cols-3 gap-2">
                       {g.lista.map((s) => (
                         <button
@@ -319,7 +320,7 @@ export default function ReservarPage() {
                             setError(null);
                             setPaso(3);
                           }}
-                          className="h-12 rounded-xl border border-linea bg-white text-lg font-semibold tabular-nums active:border-ciruela active:bg-ciruela active:text-white"
+                          className="h-12 rounded-xl border border-borde bg-superficie text-lg font-semibold tabular-nums active:border-acento active:bg-acento active:text-sobre-acento"
                         >
                           {s.hora}
                         </button>
@@ -335,18 +336,18 @@ export default function ReservarPage() {
       {/* Paso 4: datos */}
       {paso === 3 && servicio && profesional && slot && (
         <section className="px-5">
-          <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 rounded-2xl bg-ciruela-suave p-4">
-            <dt className="text-gris">Servicio</dt>
+          <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 rounded-2xl bg-acento-suave p-4">
+            <dt className="text-suave">Servicio</dt>
             <dd className="text-right font-semibold">{servicio.nombre}</dd>
-            <dt className="text-gris">Con</dt>
+            <dt className="text-suave">Con</dt>
             <dd className="text-right font-semibold">
               {profesional.id === 0 ? "Quien esté libre" : profesional.nombre}
             </dd>
-            <dt className="text-gris">Cuándo</dt>
+            <dt className="text-suave">Cuándo</dt>
             <dd className="text-right font-semibold first-letter:uppercase">
               {fechaLarga(fecha)}, {slot.hora} hs
             </dd>
-            <dt className="text-gris">Precio</dt>
+            <dt className="text-suave">Precio</dt>
             <dd className="text-right font-semibold tabular-nums">{pesos.format(Number(servicio.precio))}</dd>
           </dl>
 
@@ -356,7 +357,7 @@ export default function ReservarPage() {
               value={nombre}
               onChange={(e) => setNombre(e.target.value)}
               autoComplete="name"
-              className="mt-1.5 h-13 w-full rounded-xl border border-linea bg-white px-4 text-lg outline-none focus:border-ciruela focus:ring-2 focus:ring-ciruela/20"
+              className="mt-1.5 h-13 w-full rounded-xl border border-borde bg-superficie px-4 text-lg outline-none focus:border-acento focus:ring-2 focus:ring-acento/20"
             />
           </label>
           <label className="mt-4 block">
@@ -368,21 +369,21 @@ export default function ReservarPage() {
               inputMode="tel"
               autoComplete="tel"
               placeholder="11 2345 6789"
-              className="mt-1.5 h-13 w-full rounded-xl border border-linea bg-white px-4 text-lg outline-none placeholder:text-gris/50 focus:border-ciruela focus:ring-2 focus:ring-ciruela/20"
+              className="mt-1.5 h-13 w-full rounded-xl border border-borde bg-superficie px-4 text-lg outline-none placeholder:text-suave/50 focus:border-acento focus:ring-2 focus:ring-acento/20"
             />
           </label>
-          <p className="mt-2 text-sm text-gris">Lo usamos solo para avisarte sobre tu turno.</p>
+          <p className="mt-2 text-sm text-suave">Lo usamos solo para avisarte sobre tu turno.</p>
 
           {error && <Aviso texto={error} className="mx-0 mt-4" />}
 
           <div
-            className="fixed inset-x-0 bottom-0 border-t border-linea bg-papel/95 px-5 pt-3 backdrop-blur"
+            className="fixed inset-x-0 bottom-0 border-t border-borde bg-fondo/95 px-5 pt-3 backdrop-blur"
             style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
           >
             <button
               onClick={confirmar}
               disabled={enviando}
-              className="mx-auto block h-14 w-full max-w-md rounded-2xl bg-ciruela text-lg font-semibold text-white transition-transform active:scale-[0.98] disabled:opacity-60"
+              className="mx-auto block h-14 w-full max-w-md rounded-2xl bg-acento text-lg font-semibold text-sobre-acento transition-transform active:scale-[0.98] disabled:opacity-60"
             >
               {enviando ? "Reservando…" : "Confirmar turno"}
             </button>
@@ -403,19 +404,19 @@ function Confirmacion({ c, onOtro }: { c: Confirmado; onOtro: () => void }) {
         paddingBottom: "max(1.5rem, env(safe-area-inset-bottom))",
       }}
     >
-      <div className="grid size-16 place-items-center rounded-full bg-ciruela text-3xl text-white">✓</div>
-      <h1 className="mt-6 text-4xl font-bold tracking-tight">Turno confirmado</h1>
-      <p className="mt-3 text-lg leading-relaxed text-gris">
-        Te esperamos el <strong className="text-tinta">{c.fechaTexto}</strong> a las{" "}
-        <strong className="text-tinta">{c.hora} hs</strong>.
+      <div className="grid size-16 place-items-center rounded-full bg-acento text-3xl text-sobre-acento">✓</div>
+      <h1 className="mt-6 text-4xl font-titulo font-bold tracking-tight">Turno confirmado</h1>
+      <p className="mt-3 text-lg leading-relaxed text-suave">
+        Te esperamos el <strong className="text-texto">{c.fechaTexto}</strong> a las{" "}
+        <strong className="text-texto">{c.hora} hs</strong>.
       </p>
 
-      <dl className="mt-8 grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 border-y border-linea py-4">
-        <dt className="text-gris">Servicio</dt>
+      <dl className="mt-8 grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 border-y border-borde py-4">
+        <dt className="text-suave">Servicio</dt>
         <dd className="text-right font-semibold">{c.servicio}</dd>
-        <dt className="text-gris">Te atiende</dt>
+        <dt className="text-suave">Te atiende</dt>
         <dd className="text-right font-semibold">{c.profesional}</dd>
-        <dt className="text-gris">Precio</dt>
+        <dt className="text-suave">Precio</dt>
         <dd className="text-right font-semibold tabular-nums">{pesos.format(Number(c.precio))}</dd>
       </dl>
 
@@ -424,11 +425,11 @@ function Confirmacion({ c, onOtro }: { c: Confirmado; onOtro: () => void }) {
           href={`https://wa.me/?text=${encodeURIComponent(texto)}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex h-14 items-center justify-center rounded-2xl bg-ciruela text-lg font-semibold text-white"
+          className="flex h-14 items-center justify-center rounded-2xl bg-acento text-lg font-semibold text-sobre-acento"
         >
           Compartir por WhatsApp
         </a>
-        <button onClick={onOtro} className="h-14 w-full rounded-2xl border border-linea bg-white text-lg font-semibold">
+        <button onClick={onOtro} className="h-14 w-full rounded-2xl border border-borde bg-superficie text-lg font-semibold">
           Sacar otro turno
         </button>
       </div>
@@ -437,16 +438,16 @@ function Confirmacion({ c, onOtro }: { c: Confirmado; onOtro: () => void }) {
 }
 
 function Cargando() {
-  return <p className="px-5 py-10 text-center text-gris">Cargando…</p>;
+  return <p className="px-5 py-10 text-center text-suave">Cargando…</p>;
 }
 
 function Vacio({ texto }: { texto: string }) {
-  return <p className="mx-5 mt-4 rounded-2xl border border-dashed border-linea px-5 py-10 text-center text-gris">{texto}</p>;
+  return <p className="mx-5 mt-4 rounded-2xl border border-dashed border-borde px-5 py-10 text-center text-suave">{texto}</p>;
 }
 
 function Aviso({ texto, className = "mx-5 mb-4" }: { texto: string; className?: string }) {
   return (
-    <p role="alert" className={`${className} rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-800`}>
+    <p role="alert" className={`${className} rounded-xl bg-peligro-suave px-4 py-3 text-sm font-medium text-peligro`}>
       {texto}
     </p>
   );

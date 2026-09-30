@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { NEGOCIO } from "@/lib/config";
+import { Marca } from "@/components/Marca";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -27,15 +27,15 @@ export default function LoginPage() {
   }
 
   const campo =
-    "mt-1.5 h-13 w-full rounded-xl border border-linea bg-white px-4 text-lg outline-none focus:border-ciruela focus:ring-2 focus:ring-ciruela/20";
+    "mt-1.5 h-13 w-full rounded-xl border border-borde bg-superficie px-4 text-lg outline-none focus:border-acento focus:ring-2 focus:ring-acento/20";
 
   return (
     <main
       className="mx-auto flex min-h-dvh max-w-md flex-col justify-center px-5"
       style={{ paddingBottom: "max(2rem, env(safe-area-inset-bottom))" }}
     >
-      <p className="text-sm font-medium text-gris">{NEGOCIO.nombre}</p>
-      <h1 className="mt-1 text-[2rem] font-bold leading-tight tracking-tight">Ingresar al panel</h1>
+      <Marca grande />
+      <h1 className="mt-6 text-[2rem] font-titulo font-bold leading-tight tracking-tight">Ingresar al panel</h1>
 
       <form onSubmit={ingresar} className="mt-8">
         <label className="block">
@@ -62,7 +62,7 @@ export default function LoginPage() {
         </label>
 
         {error && (
-          <p role="alert" className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-800">
+          <p role="alert" className="mt-4 rounded-xl bg-peligro-suave px-4 py-3 text-sm font-medium text-peligro">
             {error}
           </p>
         )}
@@ -70,7 +70,7 @@ export default function LoginPage() {
         <button
           type="submit"
           disabled={cargando}
-          className="mt-6 h-14 w-full rounded-2xl bg-ciruela text-lg font-semibold text-white transition-transform active:scale-[0.98] disabled:opacity-60"
+          className="mt-6 h-14 w-full rounded-2xl bg-acento text-lg font-semibold text-sobre-acento transition-transform active:scale-[0.98] disabled:opacity-60"
         >
           {cargando ? "Ingresando…" : "Ingresar"}
         </button>
