@@ -12,6 +12,7 @@ type TurnoAgenda = {
   hora_fin: string;
   estado: string;
   precio: string;
+  notas: string | null;
   cliente: string;
   telefono: string;
   servicio: string;
@@ -38,7 +39,7 @@ const ESTILO: Record<string, string> = {
 };
 
 const SQL = `
-  SELECT t.id, t.estado, t.precio,
+  SELECT t.id, t.estado, t.precio, t.notas,
          to_char(t.inicio AT TIME ZONE $2, 'HH24:MI') AS hora,
          to_char(t.fin    AT TIME ZONE $2, 'HH24:MI') AS hora_fin,
          c.nombre AS cliente, c.telefono,
@@ -92,7 +93,7 @@ export default async function AgendaPage({ searchParams }: { searchParams: Promi
     "grid size-11 place-items-center rounded-full border border-linea bg-white text-2xl leading-none active:bg-ciruela-suave";
 
   return (
-    <main>
+    <main className="pb-24">
       <section className="px-5 pt-5">
         <div className="flex items-center justify-between">
           <Link href={`/admin?fecha=${sumarDias(fecha, -1)}`} aria-label="Día anterior" className={flecha}>
@@ -154,6 +155,7 @@ export default async function AgendaPage({ searchParams }: { searchParams: Promi
                     <p className="text-sm text-gris">
                       {pesos.format(Number(t.precio))}, celular {t.telefono}
                     </p>
+                    {t.notas && <p className="rounded-xl bg-papel px-3 py-2 text-sm">{t.notas}</p>}
                     <div className="flex gap-2">
                       <a
                         href={linkWhatsApp(t.telefono, recordatorio)}
@@ -194,6 +196,15 @@ export default async function AgendaPage({ searchParams }: { searchParams: Promi
           })}
         </ul>
       )}
+
+      <Link
+        href={`/admin/nuevo?fecha=${fecha}`}
+        aria-label="Cargar turno"
+        className="fixed right-5 grid size-16 place-items-center rounded-full bg-ciruela text-4xl font-light leading-none text-white shadow-lg shadow-ciruela/30 active:scale-95"
+        style={{ bottom: "max(1.25rem, env(safe-area-inset-bottom))" }}
+      >
+        +
+      </Link>
     </main>
   );
 }
