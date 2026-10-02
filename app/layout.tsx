@@ -18,6 +18,11 @@ const barlowCondensed = Barlow_Condensed({
 export const metadata: Metadata = {
   title: `Turnos | ${NEGOCIO.nombre}`,
   description: `Reservá tu turno en ${NEGOCIO.nombre}`,
+  appleWebApp: {
+    capable: true,
+    title: "King Black",
+    statusBarStyle: "black",
+  },
 };
 
 export const viewport: Viewport = {
