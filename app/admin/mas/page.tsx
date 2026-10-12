@@ -10,7 +10,10 @@ export default async function MasPage() {
   const opciones = [
     { href: "/admin", titulo: "Agenda", detalle: "Turnos del día" },
     ...(esAdmin
-      ? [{ href: "/admin/servicios", titulo: "Servicios y precios", detalle: "Agregar, editar o pausar servicios" }]
+      ? [
+          { href: "/admin/servicios", titulo: "Servicios y precios", detalle: "Agregar, editar o pausar servicios" },
+          { href: "/admin/peluqueros", titulo: "Peluqueros", detalle: "Equipo, días de trabajo y accesos" },
+        ]
       : []),
     { href: "/admin/cierres", titulo: "Días sin atención", detalle: "Feriados, vacaciones y cierres" },
   ];

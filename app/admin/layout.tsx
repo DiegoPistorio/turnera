@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { query } from "@/lib/db";
 import { Marca } from "@/components/Marca";
 import { APP_PANEL } from "@/lib/apps";
 
@@ -10,6 +11,12 @@ export const metadata = APP_PANEL;
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const session = await getServerSession(authOptions);
   if (!session) redirect("/login");
+
+  // Si al usuario lo desactivaron, pierde el acceso aunque tenga la sesión abierta
+  const [usuario] = await query<{ activo: boolean }>(`SELECT activo FROM usuarios WHERE id = $1`, [
+    Number(session.user.id),
+  ]);
+  if (!usuario?.activo) redirect("/login");
 
   return (
     <div className="mx-auto min-h-dvh max-w-2xl pb-10">
