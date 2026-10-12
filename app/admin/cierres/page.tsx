@@ -63,8 +63,8 @@ export default async function CierresPage() {
     <main className="pb-16">
       <div className="flex items-center gap-1 px-5 pt-4">
         <Link
-          href="/admin"
-          aria-label="Volver a la agenda"
+          href="/admin/mas"
+          aria-label="Volver"
           className="-ml-3 grid size-10 place-items-center rounded-full text-3xl leading-none active:bg-acento-suave"
         >
           ‹
