@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
@@ -16,7 +17,12 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       >
         <Marca />
         <div className="flex items-center gap-1">
-          <span className="text-sm text-suave">{session.user.name}</span>
+          <Link
+            href="/admin/cierres"
+            className="rounded-full px-3 py-1.5 text-sm font-semibold text-acento active:bg-acento-suave"
+          >
+            Cierres
+          </Link>
           <BotonSalir />
         </div>
       </header>
