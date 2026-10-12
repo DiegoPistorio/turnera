@@ -3,7 +3,10 @@ import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { Marca } from "@/components/Marca";
+import { APP_PANEL } from "@/lib/apps";
 import { BotonSalir } from "./BotonSalir";
+
+export const metadata = APP_PANEL;
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const session = await getServerSession(authOptions);
