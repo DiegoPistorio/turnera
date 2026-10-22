@@ -12,6 +12,22 @@ const RENOVAR_FALTANDO_DIAS = 30; // el token dura 180 días: se renueva cuando 
 export const RUTA_CALLBACK_OAUTH = "/api/mercadopago/oauth/callback";
 export const RUTA_WEBHOOK = "/api/mercadopago/webhook";
 
+const VARIABLES = ["NEXTAUTH_URL", "MP_CLIENT_ID", "MP_CLIENT_SECRET", "MP_WEBHOOK_SECRET", "CLAVE_CIFRADO_TOKENS"];
+
+// Para el panel: qué variables de entorno faltan o están mal (nunca muestra los valores)
+export function problemasDeConfiguracion(): string[] {
+  const problemas = VARIABLES.filter((v) => !process.env[v]).map((v) => `Falta la variable ${v}.`);
+  const k = process.env.CLAVE_CIFRADO_TOKENS;
+  if (k && Buffer.from(k, "base64").length !== 32) {
+    problemas.push("CLAVE_CIFRADO_TOKENS no es válida: generala con openssl rand -base64 32.");
+  }
+  const url = process.env.NEXTAUTH_URL;
+  if (url && !url.startsWith("https://") && process.env.NODE_ENV === "production") {
+    problemas.push("NEXTAUTH_URL tiene que empezar con https://.");
+  }
+  return problemas;
+}
+
 function env(nombre: string) {
   const valor = process.env[nombre];
   if (!valor) throw new Error(`Falta la variable de entorno ${nombre}`);

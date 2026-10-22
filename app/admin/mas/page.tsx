@@ -13,6 +13,7 @@ export default async function MasPage() {
       ? [
           { href: "/admin/servicios", titulo: "Servicios y precios", detalle: "Agregar, editar o pausar servicios" },
           { href: "/admin/peluqueros", titulo: "Peluqueros", detalle: "Equipo, días de trabajo y accesos" },
+          { href: "/admin/mercadopago", titulo: "Mercado Pago", detalle: "Cuenta donde se cobran las señas" },
         ]
       : []),
     { href: "/admin/cierres", titulo: "Días sin atención", detalle: "Feriados, vacaciones y cierres" },
