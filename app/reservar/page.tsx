@@ -13,14 +13,6 @@ type Servicio = {
 };
 type Profesional = { id: number; nombre: string; color: string };
 type Slot = { inicio: string; hora: string };
-type Confirmado = {
-  token: string;
-  servicio: string;
-  profesional: string;
-  precio: string;
-  hora: string;
-  fechaTexto: string;
-};
 
 const TZ = NEGOCIO.zonaHoraria;
 const pesos = new Intl.NumberFormat("es-AR", {
@@ -74,7 +66,6 @@ export default function ReservarPage() {
 
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [confirmado, setConfirmado] = useState<Confirmado | null>(null);
 
   useEffect(() => {
     fetch("/api/servicios")
@@ -111,16 +102,6 @@ export default function ReservarPage() {
     setPaso((p) => p - 1);
   }
 
-  function reiniciar() {
-    setConfirmado(null);
-    setServicio(null);
-    setProfesional(null);
-    setSlot(null);
-    setFecha(dias[0].iso);
-    setError(null);
-    setPaso(0);
-  }
-
   async function confirmar() {
     if (!servicio || !profesional || !slot) return;
     setError(null);
@@ -143,25 +124,22 @@ export default function ReservarPage() {
         }),
       });
       const d = await r.json();
+      if (r.ok) {
+        // El turno quedó guardado: a pagar la seña. Mercado Pago lo devuelve a /turno/<token>.
+        // El botón queda en "Yendo a Mercado Pago…" hasta que cambie la página.
+        window.location.assign(d.pagoUrl);
+        return;
+      }
       if (r.status === 409) {
-        setError(d.error);
         setSlot(null);
         setPaso(2);
-        return;
       }
-      if (!r.ok) {
-        setError(d.error ?? "No se pudo reservar el turno. Probá de nuevo.");
-        return;
-      }
-      setConfirmado({ ...d, fechaTexto: fechaLarga(fecha) });
+      setError(d.error ?? "No se pudo reservar el turno. Probá de nuevo.");
     } catch {
       setError("No hay conexión. Revisá tu internet y probá de nuevo.");
-    } finally {
-      setEnviando(false);
     }
+    setEnviando(false);
   }
-
-  if (confirmado) return <Confirmacion c={confirmado} onOtro={reiniciar} />;
 
   const manana = slots?.filter((s) => s.hora < "13:00") ?? [];
   const tarde = slots?.filter((s) => s.hora >= "13:00") ?? [];
@@ -349,7 +327,19 @@ export default function ReservarPage() {
             </dd>
             <dt className="text-suave">Precio</dt>
             <dd className="text-right font-semibold tabular-nums">{pesos.format(Number(servicio.precio))}</dd>
+            <dt className="mt-2 border-t border-acento/20 pt-2 font-semibold">Seña ahora</dt>
+            <dd className="mt-2 border-t border-acento/20 pt-2 text-right font-semibold tabular-nums text-acento">
+              {pesos.format(NEGOCIO.sena.monto)}
+            </dd>
+            <dt className="text-suave">Resto en la barbería</dt>
+            <dd className="text-right font-semibold tabular-nums">
+              {pesos.format(Math.max(Number(servicio.precio) - NEGOCIO.sena.monto, 0))}
+            </dd>
           </dl>
+          <p className="mt-3 text-sm leading-relaxed text-suave">
+            Para confirmar el turno pagás una seña con Mercado Pago. Tenés {NEGOCIO.sena.minutosParaPagar} minutos;
+            si no, el horario se libera. Si cancelás, la seña no se devuelve.
+          </p>
 
           <label className="mt-6 block">
             <span className="text-sm font-medium">Nombre y apellido</span>
@@ -385,54 +375,11 @@ export default function ReservarPage() {
               disabled={enviando}
               className="mx-auto block h-14 w-full max-w-md rounded-2xl bg-acento text-lg font-semibold text-sobre-acento transition-transform active:scale-[0.98] disabled:opacity-60"
             >
-              {enviando ? "Reservando…" : "Confirmar turno"}
+              {enviando ? "Yendo a Mercado Pago…" : `Pagar seña ${pesos.format(NEGOCIO.sena.monto)}`}
             </button>
           </div>
         </section>
       )}
-    </main>
-  );
-}
-
-function Confirmacion({ c, onOtro }: { c: Confirmado; onOtro: () => void }) {
-  const texto = `Turno en ${NEGOCIO.nombre}: ${c.servicio} con ${c.profesional}, el ${c.fechaTexto} a las ${c.hora} hs.`;
-  return (
-    <main
-      className="mx-auto flex min-h-dvh max-w-md flex-col px-5"
-      style={{
-        paddingTop: "max(3rem, env(safe-area-inset-top))",
-        paddingBottom: "max(1.5rem, env(safe-area-inset-bottom))",
-      }}
-    >
-      <div className="grid size-16 place-items-center rounded-full bg-acento text-3xl text-sobre-acento">✓</div>
-      <h1 className="mt-6 text-4xl font-titulo font-bold tracking-tight">Turno confirmado</h1>
-      <p className="mt-3 text-lg leading-relaxed text-suave">
-        Te esperamos el <strong className="text-texto">{c.fechaTexto}</strong> a las{" "}
-        <strong className="text-texto">{c.hora} hs</strong>.
-      </p>
-
-      <dl className="mt-8 grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 border-y border-borde py-4">
-        <dt className="text-suave">Servicio</dt>
-        <dd className="text-right font-semibold">{c.servicio}</dd>
-        <dt className="text-suave">Te atiende</dt>
-        <dd className="text-right font-semibold">{c.profesional}</dd>
-        <dt className="text-suave">Precio</dt>
-        <dd className="text-right font-semibold tabular-nums">{pesos.format(Number(c.precio))}</dd>
-      </dl>
-
-      <div className="mt-auto space-y-3 pt-10">
-        <a
-          href={`https://wa.me/?text=${encodeURIComponent(texto)}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex h-14 items-center justify-center rounded-2xl bg-acento text-lg font-semibold text-sobre-acento"
-        >
-          Compartir por WhatsApp
-        </a>
-        <button onClick={onOtro} className="h-14 w-full rounded-2xl border border-borde bg-superficie text-lg font-semibold">
-          Sacar otro turno
-        </button>
-      </div>
     </main>
   );
 }

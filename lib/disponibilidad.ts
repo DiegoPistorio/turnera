@@ -1,6 +1,13 @@
-import { query } from "@/lib/db";
+import type { Pool, PoolClient } from "pg";
+import { pool, query } from "@/lib/db";
 
 export type Slot = { inicio: string; hora: string };
+
+// Los turnos web que no se pagaron a tiempo pasan a "vencido" y liberan el horario.
+// Se corre antes de mostrar o reservar horarios, así no hace falta un proceso aparte.
+export async function vencerPendientes(db: Pool | PoolClient = pool) {
+  await db.query(`UPDATE turnos SET estado = 'vencido' WHERE estado = 'pendiente' AND vence_en < now()`);
+}
 
 // Devuelve los horarios libres de un profesional para un servicio en una fecha.
 // Todo el cálculo lo hace Postgres: genera candidatos cada 15 min dentro de las

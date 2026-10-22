@@ -51,6 +51,7 @@ const SQL = `
     JOIN profesionales p ON p.id = t.profesional_id
    WHERE (t.inicio AT TIME ZONE $2)::date = $1::date
      AND ($3::int IS NULL OR p.usuario_id = $3)
+     AND NOT (t.estado = 'vencido' OR (t.estado = 'pendiente' AND t.vence_en < now())) -- web impagos: nunca existieron
    ORDER BY t.inicio, p.nombre`;
 
 function hoyISO() {

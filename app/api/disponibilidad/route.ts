@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { obtenerDisponibilidad, obtenerDisponibilidadCualquiera } from "@/lib/disponibilidad";
+import { obtenerDisponibilidad, obtenerDisponibilidadCualquiera, vencerPendientes } from "@/lib/disponibilidad";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +16,7 @@ export async function GET(req: NextRequest) {
   }
 
   try {
+    await vencerPendientes();
     const slots =
       profesional === 0
         ? await obtenerDisponibilidadCualquiera(servicio, fecha)

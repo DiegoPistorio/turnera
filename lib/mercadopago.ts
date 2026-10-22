@@ -270,6 +270,12 @@ export async function crearPreferencia(d: DatosPreferencia): Promise<{ id: strin
   return { id: p.id, initPoint: p.init_point };
 }
 
+// Para reintentar el pago: el link de la misma preferencia (sigue valiendo hasta que vence)
+export async function urlDePago(preferenciaId: string) {
+  const p = await api<{ init_point: string }>(`/checkout/preferences/${encodeURIComponent(preferenciaId)}`);
+  return p.init_point;
+}
+
 export type PagoMP = {
   id: number;
   status: string; // approved, rejected, refunded, charged_back, cancelled...

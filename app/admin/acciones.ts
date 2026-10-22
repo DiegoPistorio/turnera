@@ -5,6 +5,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { pool, query } from "@/lib/db";
 import { NEGOCIO } from "@/lib/config";
+import { vencerPendientes } from "@/lib/disponibilidad";
 
 const ESTADOS = ["confirmado", "completado", "ausente", "cancelado"];
 
@@ -49,7 +50,7 @@ export async function buscarCliente(telefono: string): Promise<{ nombre: string;
   const [c] = await query<{ nombre: string; turnos: number }>(
     `SELECT c.nombre, count(t.id)::int AS turnos
        FROM clientes c
-       LEFT JOIN turnos t ON t.cliente_id = c.id AND t.estado <> 'cancelado'
+       LEFT JOIN turnos t ON t.cliente_id = c.id AND t.estado NOT IN ('cancelado', 'vencido')
       WHERE c.telefono = $1
       GROUP BY c.id`,
     [digitos]
@@ -110,6 +111,7 @@ export async function crearTurno(d: NuevoTurno): Promise<{ error?: string }> {
        RETURNING id`,
       [nombre, telefono]
     );
+    await vencerPendientes(client); // un turno web impago y vencido no tiene que frenar la carga
     await client.query(
       `WITH x AS (SELECT ($5::date + $6::time) AT TIME ZONE $9 AS inicio)
        INSERT INTO turnos (cliente_id, profesional_id, servicio_id, inicio, fin, precio, notas, origen)
