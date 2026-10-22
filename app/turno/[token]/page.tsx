@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { query } from "@/lib/db";
 import { NEGOCIO } from "@/lib/config";
 import { Marca } from "@/components/Marca";
+import { reconciliarTurno } from "@/lib/pagos";
 import { Actualizar } from "./Actualizar";
 
 export const dynamic = "force-dynamic";
@@ -21,6 +22,21 @@ type Turno = {
   profesional: string;
 };
 
+// Un pendiente con el plazo cumplido se muestra como vencido aunque todavía no se haya marcado
+async function buscarTurno(token: string) {
+  const [t] = await query<Turno>(
+    `SELECT CASE WHEN t.estado = 'pendiente' AND t.vence_en < now() THEN 'vencido' ELSE t.estado::text END AS estado,
+            t.inicio, t.vence_en, t.precio, t.sena,
+            s.nombre AS servicio, p.nombre AS profesional
+       FROM turnos t
+       JOIN servicios s     ON s.id = t.servicio_id
+       JOIN profesionales p ON p.id = t.profesional_id
+      WHERE t.token = $1`,
+    [token]
+  );
+  return t;
+}
+
 const hora = (d: Date) =>
   d.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: TZ });
 const fechaLarga = (d: Date) =>
@@ -32,25 +48,25 @@ export default async function TurnoPage({
   searchParams,
 }: {
   params: Promise<{ token: string }>;
-  searchParams: Promise<{ status?: string; collection_status?: string; error?: string }>;
+  searchParams: Promise<{ status?: string; collection_status?: string; payment_id?: string; error?: string }>;
 }) {
   const { token } = await params;
   if (!UUID.test(token)) notFound();
   const sp = await searchParams;
   const estadoPago = sp.collection_status ?? sp.status; // lo agrega Mercado Pago al volver
 
-  // Un pendiente con el plazo cumplido se muestra como vencido aunque todavía no se haya marcado
-  const [t] = await query<Turno>(
-    `SELECT CASE WHEN t.estado = 'pendiente' AND t.vence_en < now() THEN 'vencido' ELSE t.estado::text END AS estado,
-            t.inicio, t.vence_en, t.precio, t.sena,
-            s.nombre AS servicio, p.nombre AS profesional
-       FROM turnos t
-       JOIN servicios s     ON s.id = t.servicio_id
-       JOIN profesionales p ON p.id = t.profesional_id
-      WHERE t.token = $1`,
-    [token]
-  );
+  let t = await buscarTurno(token);
   if (!t) notFound();
+
+  // Si todavía figura sin pagar, le preguntamos a Mercado Pago por si el webhook no llegó o se demora
+  if (t.estado === "pendiente" || (t.estado === "vencido" && sp.payment_id)) {
+    try {
+      await reconciliarTurno(token, sp.payment_id);
+      t = (await buscarTurno(token)) ?? t;
+    } catch (e) {
+      console.error("No se pudo consultar el pago en Mercado Pago:", e);
+    }
+  }
 
   const saldo = Math.max(Number(t.precio) - Number(t.sena), 0);
   const cuando = `${fechaLarga(t.inicio)} a las ${hora(t.inicio)} hs`;
