@@ -130,3 +130,72 @@ export async function reconciliarTurno(token: string, paymentId?: string) {
     if (p.status === "approved") await procesarPago(p.id);
   }
 }
+
+// Cancela un turno pendiente o confirmado y anota quién lo canceló.
+// Si cancela la barbería, se devuelven las señas cobradas; si cancela el cliente, la seña queda para la barbería.
+// `por` null = turno sin seña cancelado desde el panel, donde da igual quién lo pidió.
+// `soloUsuario` limita a los turnos de ese profesional; `horasAntes` exige que falte al menos ese tiempo (cliente).
+export async function cancelarTurno(
+  turnoId: number,
+  por: "cliente" | "barberia" | null,
+  opciones: { soloUsuario?: number | null; horasAntes?: number } = {}
+): Promise<{ error?: string; devolucionFallida?: boolean }> {
+  let aDevolver: string[] = [];
+
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    const { rows: [turno] } = await client.query(
+      `SELECT t.id, t.estado,
+              t.inicio - now() >= make_interval(hours => $3::int) AS a_tiempo,
+              EXISTS (SELECT 1 FROM pagos g
+                       WHERE g.turno_id = t.id AND g.estado = 'approved' AND g.reembolso_estado IS NULL) AS sena_pagada
+         FROM turnos t
+         JOIN profesionales p ON p.id = t.profesional_id
+        WHERE t.id = $1 AND ($2::int IS NULL OR p.usuario_id = $2)
+        FOR UPDATE OF t`,
+      [turnoId, opciones.soloUsuario ?? null, opciones.horasAntes ?? 0]
+    );
+    if (!turno) {
+      await client.query("ROLLBACK");
+      return { error: "El turno no existe." };
+    }
+    if (turno.estado !== "pendiente" && turno.estado !== "confirmado") {
+      await client.query("ROLLBACK");
+      return { error: "Este turno ya no se puede cancelar." };
+    }
+    if (!turno.a_tiempo) {
+      await client.query("ROLLBACK");
+      return { error: "Ya pasó el plazo para cancelar." };
+    }
+    // Con la seña cobrada hay que saber quién canceló: de eso depende si se devuelve
+    if (turno.sena_pagada && !por) {
+      await client.query("ROLLBACK");
+      return { error: "Indicá quién canceló el turno." };
+    }
+
+    await client.query(`UPDATE turnos SET estado = 'cancelado', cancelado_por = $2 WHERE id = $1`, [turnoId, por]);
+    if (por === "barberia") {
+      const { rows } = await client.query(
+        `UPDATE pagos SET reembolso_estado = 'pendiente', actualizado_en = now()
+          WHERE turno_id = $1 AND estado = 'approved' AND reembolso_estado IS NULL
+          RETURNING mp_payment_id`,
+        [turnoId]
+      );
+      aDevolver = rows.map((r) => String(r.mp_payment_id));
+    }
+    await client.query("COMMIT");
+  } catch (e) {
+    await client.query("ROLLBACK").catch(() => {});
+    throw e;
+  } finally {
+    client.release();
+  }
+
+  // Igual que en procesarPago: el reembolso, fuera de la transacción
+  let devolucionFallida = false;
+  for (const id of aDevolver) {
+    if ((await devolverPago(id)).error) devolucionFallida = true;
+  }
+  return { devolucionFallida };
+}

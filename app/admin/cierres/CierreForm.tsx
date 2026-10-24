@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { NEGOCIO } from "@/lib/config";
 import { linkWhatsApp } from "@/lib/telefono";
 import { crearCierre, type TurnoAfectado } from "./acciones";
+import { cancelar } from "../acciones";
 
 export type ProfesionalOpcion = { id: number; nombre: string; color: string };
 
@@ -32,6 +33,43 @@ function fechaTexto(iso: string) {
     month: "long",
     timeZone: NEGOCIO.zonaHoraria,
   });
+}
+
+// Lo cancela la barbería: si tenía seña, se le devuelve al cliente
+function CancelarAfectado({ t }: { t: TurnoAfectado }) {
+  const [estado, setEstado] = useState<"listo" | "devolucion-fallida" | null>(null);
+  const [pendiente, iniciar] = useTransition();
+
+  if (estado) {
+    return (
+      <p className={`text-sm font-medium ${estado === "listo" ? "text-acento" : "text-peligro"}`}>
+        {estado === "listo"
+          ? t.sena_pagada
+            ? "Cancelado, seña devuelta."
+            : "Cancelado."
+          : "Cancelado, pero la devolución falló: reintentala desde la agenda."}
+      </p>
+    );
+  }
+  return (
+    <button
+      disabled={pendiente}
+      onClick={() => {
+        const pregunta = t.sena_pagada
+          ? `¿Cancelar el turno de ${t.cliente} y devolverle la seña por Mercado Pago?`
+          : `¿Cancelar el turno de ${t.cliente}?`;
+        if (!window.confirm(pregunta)) return;
+        iniciar(async () => {
+          const r = await cancelar(t.id, t.sena_pagada ? "barberia" : null);
+          if (r.error) alert(r.error);
+          else setEstado(r.devolucionFallida ? "devolucion-fallida" : "listo");
+        });
+      }}
+      className="h-10 rounded-xl border border-peligro/40 bg-superficie px-3 text-sm font-semibold text-peligro active:bg-peligro-suave disabled:opacity-50"
+    >
+      {pendiente ? "Cancelando…" : t.sena_pagada ? "Cancelar y devolver la seña" : "Cancelar turno"}
+    </button>
+  );
 }
 
 export function CierreForm({
@@ -210,27 +248,31 @@ export function CierreForm({
             en ese período.
           </p>
           <p className="mt-1 text-sm text-suave">
-            No se cancelaron. Avisale a cada cliente y después gestioná el turno desde la agenda.
+            No se cancelaron. Avisale a cada cliente y cancelá o reprogramá cada turno. Si tenía seña, al cancelarlo
+            acá se le devuelve.
           </p>
           <ul className="mt-3 space-y-3">
             {guardado.afectados.map((t) => {
               const mensaje = `Hola ${t.cliente.split(" ")[0]}! Te escribimos de ${NEGOCIO.nombre}: el ${fechaTexto(t.fecha)} no vamos a poder atenderte a las ${t.hora} hs. ¿Querés que reprogramemos tu turno?`;
               return (
-                <li key={t.id} className="flex items-center gap-3">
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate font-semibold">{t.cliente}</p>
-                    <p className="truncate text-sm text-suave first-letter:uppercase">
-                      {fechaTexto(t.fecha)}, {t.hora} hs · {t.servicio} con {t.profesional}
-                    </p>
+                <li key={t.id} className="space-y-2">
+                  <div className="flex items-center gap-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-semibold">{t.cliente}</p>
+                      <p className="truncate text-sm text-suave first-letter:uppercase">
+                        {fechaTexto(t.fecha)}, {t.hora} hs · {t.servicio} con {t.profesional}
+                      </p>
+                    </div>
+                    <a
+                      href={linkWhatsApp(t.telefono, mensaje)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex h-10 shrink-0 items-center rounded-xl bg-acento px-3 text-sm font-semibold text-sobre-acento"
+                    >
+                      Avisar
+                    </a>
                   </div>
-                  <a
-                    href={linkWhatsApp(t.telefono, mensaje)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex h-10 shrink-0 items-center rounded-xl bg-acento px-3 text-sm font-semibold text-sobre-acento"
-                  >
-                    Avisar
-                  </a>
+                  <CancelarAfectado t={t} />
                 </li>
               );
             })}

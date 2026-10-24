@@ -6,8 +6,10 @@ import { authOptions } from "@/lib/auth";
 import { pool, query } from "@/lib/db";
 import { NEGOCIO } from "@/lib/config";
 import { vencerPendientes } from "@/lib/disponibilidad";
+import { cancelarTurno, devolverPago } from "@/lib/pagos";
 
-const ESTADOS = ["confirmado", "completado", "ausente", "cancelado"];
+// Cancelar no va por acá: tiene su propia acción porque puede devolver la seña
+const ESTADOS = ["confirmado", "completado", "ausente"];
 
 export async function cambiarEstado(id: number, estado: string): Promise<{ error?: string }> {
   const session = await getServerSession(authOptions);
@@ -20,7 +22,8 @@ export async function cambiarEstado(id: number, estado: string): Promise<{ error
   try {
     await query(
       `UPDATE turnos t
-          SET estado = $2
+          SET estado = $2,
+              cancelado_por = CASE WHEN $2 = 'confirmado' THEN NULL ELSE t.cancelado_por END
          FROM profesionales p
         WHERE t.id = $1
           AND p.id = t.profesional_id
@@ -37,6 +40,47 @@ export async function cambiarEstado(id: number, estado: string): Promise<{ error
 
   revalidatePath("/admin");
   return {};
+}
+
+// `por` solo hace falta si el turno tiene la seña cobrada: "cliente" la retiene, "barberia" la devuelve
+export async function cancelar(
+  id: number,
+  por: "cliente" | "barberia" | null
+): Promise<{ error?: string; devolucionFallida?: boolean }> {
+  const session = await getServerSession(authOptions);
+  if (!session) return { error: "Tu sesión venció. Volvé a ingresar." };
+  if (por !== null && por !== "cliente" && por !== "barberia") return { error: "Opción inválida." };
+
+  const soloUsuario = session.user.rol === "profesional" ? Number(session.user.id) : null;
+  const r = await cancelarTurno(id, por, { soloUsuario });
+
+  revalidatePath("/admin");
+  return r;
+}
+
+// Vuelve a intentar las devoluciones de seña que fallaron en un turno
+export async function reintentarDevolucion(turnoId: number): Promise<{ error?: string }> {
+  const session = await getServerSession(authOptions);
+  if (!session) return { error: "Tu sesión venció. Volvé a ingresar." };
+  const soloUsuario = session.user.rol === "profesional" ? Number(session.user.id) : null;
+
+  const pagos = await query<{ mp_payment_id: string }>(
+    `SELECT g.mp_payment_id
+       FROM pagos g
+       JOIN turnos t        ON t.id = g.turno_id
+       JOIN profesionales p ON p.id = t.profesional_id
+      WHERE g.turno_id = $1 AND g.reembolso_estado = 'error'
+        AND ($2::int IS NULL OR p.usuario_id = $2)`,
+    [turnoId, soloUsuario]
+  );
+  let error: string | undefined;
+  for (const g of pagos) {
+    const r = await devolverPago(g.mp_payment_id);
+    if (r.error) error = `Mercado Pago no aceptó la devolución: ${r.error}`;
+  }
+
+  revalidatePath("/admin");
+  return { error };
 }
 
 // ---------- Carga manual de turnos ----------

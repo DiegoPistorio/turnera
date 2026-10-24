@@ -5,6 +5,7 @@ import { NEGOCIO } from "@/lib/config";
 import { Marca } from "@/components/Marca";
 import { reconciliarTurno } from "@/lib/pagos";
 import { Actualizar } from "./Actualizar";
+import { BotonCancelar } from "./BotonCancelar";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +19,10 @@ type Turno = {
   vence_en: Date | null;
   precio: string;
   sena: string;
+  sena_pagada: boolean;
+  cancelado_por: "cliente" | "barberia" | null;
+  devolucion: "pendiente" | "hecho" | "error" | null;
+  puede_cancelar: boolean;
   servicio: string;
   profesional: string;
 };
@@ -26,13 +31,19 @@ type Turno = {
 async function buscarTurno(token: string) {
   const [t] = await query<Turno>(
     `SELECT CASE WHEN t.estado = 'pendiente' AND t.vence_en < now() THEN 'vencido' ELSE t.estado::text END AS estado,
-            t.inicio, t.vence_en, t.precio, t.sena,
+            t.inicio, t.vence_en, t.precio, t.sena, t.cancelado_por,
+            EXISTS (SELECT 1 FROM pagos g
+                     WHERE g.turno_id = t.id AND g.estado = 'approved' AND g.reembolso_estado IS NULL) AS sena_pagada,
+            (SELECT CASE WHEN bool_or(g.reembolso_estado = 'hecho') THEN 'hecho'
+                         WHEN bool_or(g.reembolso_estado IN ('pendiente', 'error')) THEN 'pendiente' END
+               FROM pagos g WHERE g.turno_id = t.id) AS devolucion,
+            t.inicio - now() >= make_interval(hours => $2::int) AS puede_cancelar,
             s.nombre AS servicio, p.nombre AS profesional
        FROM turnos t
        JOIN servicios s     ON s.id = t.servicio_id
        JOIN profesionales p ON p.id = t.profesional_id
       WHERE t.token = $1`,
-    [token]
+    [token, NEGOCIO.sena.horasMinimasCancelacion]
   );
   return t;
 }
@@ -156,13 +167,21 @@ export default async function TurnoPage({
             Compartir por WhatsApp
           </a>
           <OtroTurno />
+          {t.puede_cancelar ? (
+            <BotonCancelar token={token} sena={t.sena_pagada ? pesos.format(Number(t.sena)) : null} />
+          ) : (
+            <p className="text-center text-sm text-suave">
+              Para cancelar con menos de {NEGOCIO.sena.horasMinimasCancelacion} hs de anticipación, escribile a la
+              barbería.
+            </p>
+          )}
         </div>
       </>
     );
   } else {
     const titulo: Record<string, [string, string]> = {
       vencido: ["Se venció el plazo", `No se pagó la seña a tiempo y el horario se liberó. Podés sacar un turno nuevo.`],
-      cancelado: ["Turno cancelado", "Este turno fue cancelado."],
+      cancelado: ["Turno cancelado", textoCancelado(t)],
       completado: ["¡Gracias por venir!", "Este turno ya fue atendido."],
       ausente: ["Turno no asistido", "Este turno quedó registrado como ausente."],
     };
@@ -194,6 +213,18 @@ export default async function TurnoPage({
       {contenido}
     </main>
   );
+}
+
+function textoCancelado(t: Turno) {
+  const sena = pesos.format(Number(t.sena));
+  if (t.devolucion === "hecho") {
+    return `${NEGOCIO.nombre} canceló el turno y te devolvió la seña de ${sena}. Según el medio de pago, puede tardar unos días en verse.`;
+  }
+  if (t.devolucion === "pendiente") return `${NEGOCIO.nombre} canceló el turno. Te estamos devolviendo la seña de ${sena}.`;
+  if (t.cancelado_por === "cliente") {
+    return t.sena_pagada ? `Cancelaste este turno. La seña de ${sena} no se devuelve.` : "Cancelaste este turno.";
+  }
+  return "Este turno fue cancelado.";
 }
 
 function Icono({ children }: { children: React.ReactNode }) {

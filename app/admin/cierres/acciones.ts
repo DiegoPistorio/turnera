@@ -14,6 +14,7 @@ export type TurnoAfectado = {
   telefono: string;
   servicio: string;
   profesional: string;
+  sena_pagada: boolean;
 };
 
 type NuevoCierre = {
@@ -75,12 +76,14 @@ export async function crearCierre(
     params
   );
 
-  // Turnos ya reservados que caen dentro del cierre: no se cancelan solos, se avisan
+  // Turnos ya reservados que caen dentro del cierre: no se cancelan solos, se avisan y se cancelan desde la lista
   const afectados = await query<TurnoAfectado>(
     `SELECT t.id,
             to_char(t.inicio AT TIME ZONE $4, 'YYYY-MM-DD') AS fecha,
             to_char(t.inicio AT TIME ZONE $4, 'HH24:MI') AS hora,
-            c.nombre AS cliente, c.telefono, s.nombre AS servicio, p.nombre AS profesional
+            c.nombre AS cliente, c.telefono, s.nombre AS servicio, p.nombre AS profesional,
+            EXISTS (SELECT 1 FROM pagos g
+                     WHERE g.turno_id = t.id AND g.estado = 'approved' AND g.reembolso_estado IS NULL) AS sena_pagada
        FROM turnos t
        JOIN clientes c      ON c.id = t.cliente_id
        JOIN servicios s     ON s.id = t.servicio_id

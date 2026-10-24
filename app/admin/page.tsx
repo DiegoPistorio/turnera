@@ -5,6 +5,8 @@ import { query } from "@/lib/db";
 import { NEGOCIO } from "@/lib/config";
 import { linkWhatsApp } from "@/lib/telefono";
 import { BotonEstado } from "./BotonEstado";
+import { BotonCancelar } from "./BotonCancelar";
+import { BotonReintentar } from "./BotonReintentar";
 
 type TurnoAgenda = {
   id: number;
@@ -13,6 +15,10 @@ type TurnoAgenda = {
   estado: string;
   precio: string;
   notas: string | null;
+  sena: string;
+  sena_pagada: boolean;
+  devolucion: "pendiente" | "hecho" | "error" | null;
+  cancelado_por: "cliente" | "barberia" | null;
   cliente: string;
   telefono: string;
   servicio: string;
@@ -39,7 +45,13 @@ const ESTILO: Record<string, string> = {
 };
 
 const SQL = `
-  SELECT t.id, t.estado, t.precio, t.notas,
+  SELECT t.id, t.estado, t.precio, t.notas, t.sena, t.cancelado_por,
+         EXISTS (SELECT 1 FROM pagos g
+                  WHERE g.turno_id = t.id AND g.estado = 'approved' AND g.reembolso_estado IS NULL) AS sena_pagada,
+         (SELECT CASE WHEN bool_or(g.reembolso_estado = 'error') THEN 'error'
+                      WHEN bool_or(g.reembolso_estado = 'pendiente') THEN 'pendiente'
+                      WHEN bool_or(g.reembolso_estado = 'hecho') THEN 'hecho' END
+            FROM pagos g WHERE g.turno_id = t.id) AS devolucion,
          to_char(t.inicio AT TIME ZONE $2, 'HH24:MI') AS hora,
          to_char(t.fin    AT TIME ZONE $2, 'HH24:MI') AS hora_fin,
          c.nombre AS cliente, c.telefono,
@@ -53,6 +65,30 @@ const SQL = `
      AND ($3::int IS NULL OR p.usuario_id = $3)
      AND NOT (t.estado = 'vencido' OR (t.estado = 'pendiente' AND t.vence_en < now())) -- web impagos: nunca existieron
    ORDER BY t.inicio, p.nombre`;
+
+// Devoluciones de seña que Mercado Pago rechazó, de cualquier día: quedan a la vista hasta que salgan.
+// Incluye turnos vencidos (pagó tarde con el horario ocupado), que la agenda no muestra.
+type DevolucionFallida = {
+  turno_id: number;
+  fecha: string;
+  hora: string;
+  cliente: string;
+  monto: string;
+  error: string | null;
+};
+const SQL_DEVOLUCIONES = `
+  SELECT t.id AS turno_id,
+         to_char(t.inicio AT TIME ZONE $1, 'DD/MM') AS fecha,
+         to_char(t.inicio AT TIME ZONE $1, 'HH24:MI') AS hora,
+         c.nombre AS cliente, sum(g.monto) AS monto, max(g.reembolso_error) AS error
+    FROM pagos g
+    JOIN turnos t        ON t.id = g.turno_id
+    JOIN clientes c      ON c.id = t.cliente_id
+    JOIN profesionales p ON p.id = t.profesional_id
+   WHERE g.reembolso_estado = 'error'
+     AND ($2::int IS NULL OR p.usuario_id = $2)
+   GROUP BY t.id, c.nombre
+   ORDER BY t.inicio`;
 
 function hoyISO() {
   return new Date().toLocaleDateString("en-CA", { timeZone: TZ });
@@ -75,7 +111,10 @@ export default async function AgendaPage({ searchParams }: { searchParams: Promi
 
   const session = await getServerSession(authOptions);
   const soloUsuario = session?.user.rol === "profesional" ? Number(session.user.id) : null;
-  const turnos = await query<TurnoAgenda>(SQL, [fecha, TZ, soloUsuario]);
+  const [turnos, devoluciones] = await Promise.all([
+    query<TurnoAgenda>(SQL, [fecha, TZ, soloUsuario]),
+    query<DevolucionFallida>(SQL_DEVOLUCIONES, [TZ, soloUsuario]),
+  ]);
 
   const activos = turnos.filter((t) => t.estado !== "cancelado");
   const estimado = activos.filter((t) => t.estado !== "ausente").reduce((suma, t) => suma + Number(t.precio), 0);
@@ -113,6 +152,35 @@ export default async function AgendaPage({ searchParams }: { searchParams: Promi
           <Link href="/admin" className="mx-auto mt-2 block w-fit text-sm font-semibold text-acento">
             Volver a hoy
           </Link>
+        )}
+
+        {devoluciones.length > 0 && (
+          <div role="alert" className="mt-5 rounded-2xl border border-peligro/40 bg-peligro-suave p-4">
+            <p className="font-semibold text-peligro">
+              {devoluciones.length === 1
+                ? "Hay 1 seña que no se pudo devolver"
+                : `Hay ${devoluciones.length} señas que no se pudieron devolver`}
+            </p>
+            <p className="mt-1 text-sm text-suave">
+              Suele pasar si la cuenta de Mercado Pago no tiene saldo. Revisala y volvé a intentar.
+            </p>
+            <ul className="mt-3 space-y-3">
+              {devoluciones.map((d) => (
+                <li key={d.turno_id} className="flex items-center gap-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-semibold">
+                      {d.cliente}, {pesos.format(Number(d.monto))}
+                    </p>
+                    <p className="truncate text-sm text-suave">
+                      Turno del {d.fecha} a las {d.hora}
+                      {d.error && ` · ${d.error}`}
+                    </p>
+                  </div>
+                  <BotonReintentar turnoId={d.turno_id} />
+                </li>
+              ))}
+            </ul>
+          </div>
         )}
 
         <p className="mt-5 text-sm text-suave">
@@ -157,6 +225,15 @@ export default async function AgendaPage({ searchParams }: { searchParams: Promi
                       {pesos.format(Number(t.precio))}, celular {t.telefono}
                     </p>
                     {t.notas && <p className="rounded-xl bg-fondo px-3 py-2 text-sm">{t.notas}</p>}
+                    {t.estado === "cancelado" && (t.cancelado_por || t.devolucion) && (
+                      <p className="text-sm text-suave">
+                        {t.cancelado_por === "cliente" ? "Lo canceló el cliente" : "Lo canceló la barbería"}
+                        {t.devolucion === "hecho" && `. Seña de ${pesos.format(Number(t.sena))} devuelta.`}
+                        {t.devolucion === "pendiente" && ". Devolviendo la seña…"}
+                        {t.devolucion === "error" && ". La devolución de la seña falló (ver arriba)."}
+                        {!t.devolucion && t.sena_pagada && `. La seña de ${pesos.format(Number(t.sena))} no se devuelve.`}
+                      </p>
+                    )}
                     <div className="flex gap-2">
                       <a
                         href={linkWhatsApp(t.telefono, recordatorio)}
@@ -175,17 +252,25 @@ export default async function AgendaPage({ searchParams }: { searchParams: Promi
                     </div>
                     <div className="flex flex-wrap gap-2">
                       {cerrado ? (
-                        <BotonEstado id={t.id} estado="confirmado" texto="Volver a confirmado" />
+                        <BotonEstado
+                          id={t.id}
+                          estado="confirmado"
+                          texto="Volver a confirmado"
+                          confirmar={
+                            t.devolucion
+                              ? `A ${t.cliente} ya se le devolvió (o se le está devolviendo) la seña. Si reactivás el turno, queda confirmado sin seña y paga todo en el local. ¿Seguir?`
+                              : undefined
+                          }
+                        />
                       ) : (
                         <>
                           <BotonEstado id={t.id} estado="completado" texto="Atendido" />
                           <BotonEstado id={t.id} estado="ausente" texto="No vino" />
-                          <BotonEstado
+                          <BotonCancelar
                             id={t.id}
-                            estado="cancelado"
-                            texto="Cancelar turno"
-                            confirmar={`¿Cancelar el turno de ${t.cliente} a las ${t.hora}? El horario queda libre para otra reserva.`}
-                            peligro
+                            cliente={t.cliente}
+                            hora={t.hora}
+                            sena={t.sena_pagada ? pesos.format(Number(t.sena)) : null}
                           />
                         </>
                       )}
