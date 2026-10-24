@@ -12,6 +12,7 @@ type TurnoAgenda = {
   id: number;
   hora: string;
   hora_fin: string;
+  vence: string | null; // HH:MM hasta la que se puede pagar la seña, solo en pendientes
   estado: string;
   precio: string;
   notas: string | null;
@@ -30,11 +31,12 @@ const TZ = NEGOCIO.zonaHoraria;
 const pesos = new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 });
 
 const ETIQUETA: Record<string, string> = {
-  pendiente: "Pendiente",
+  pendiente: "Esperando pago",
   confirmado: "Confirmado",
   completado: "Atendido",
   ausente: "No vino",
   cancelado: "Cancelado",
+  vencido: "Sin pagar",
 };
 const ESTILO: Record<string, string> = {
   pendiente: "bg-amber-400/15 text-amber-300",
@@ -42,6 +44,7 @@ const ESTILO: Record<string, string> = {
   completado: "bg-emerald-400/15 text-emerald-300",
   ausente: "bg-orange-400/15 text-orange-300",
   cancelado: "bg-borde text-suave",
+  vencido: "bg-borde text-suave",
 };
 
 const SQL = `
@@ -54,6 +57,7 @@ const SQL = `
             FROM pagos g WHERE g.turno_id = t.id) AS devolucion,
          to_char(t.inicio AT TIME ZONE $2, 'HH24:MI') AS hora,
          to_char(t.fin    AT TIME ZONE $2, 'HH24:MI') AS hora_fin,
+         CASE WHEN t.estado = 'pendiente' THEN to_char(t.vence_en AT TIME ZONE $2, 'HH24:MI') END AS vence,
          c.nombre AS cliente, c.telefono,
          s.nombre AS servicio,
          p.nombre AS profesional, p.color
@@ -117,7 +121,12 @@ export default async function AgendaPage({ searchParams }: { searchParams: Promi
   ]);
 
   const activos = turnos.filter((t) => t.estado !== "cancelado");
-  const estimado = activos.filter((t) => t.estado !== "ausente").reduce((suma, t) => suma + Number(t.precio), 0);
+  // Lo que se espera cobrar: el precio de los que vienen, y la seña que queda de los que faltaron o cancelaron
+  const estimado = turnos.reduce((suma, t) => {
+    if (t.estado === "pendiente" || t.estado === "confirmado" || t.estado === "completado") return suma + Number(t.precio);
+    return suma + (t.sena_pagada ? Number(t.sena) : 0);
+  }, 0);
+  const enSenas = turnos.reduce((suma, t) => suma + (t.sena_pagada ? Number(t.sena) : 0), 0);
 
   const titulo =
     fecha === hoy
@@ -185,7 +194,8 @@ export default async function AgendaPage({ searchParams }: { searchParams: Promi
 
         <p className="mt-5 text-sm text-suave">
           {activos.length === 1 ? "1 turno" : `${activos.length} turnos`}
-          {activos.length > 0 && `, ${pesos.format(estimado)} estimado`}
+          {estimado > 0 && `, ${pesos.format(estimado)} estimado`}
+          {enSenas > 0 && ` (${pesos.format(enSenas)} ya cobrado en señas)`}
         </p>
       </section>
 
@@ -214,6 +224,7 @@ export default async function AgendaPage({ searchParams }: { searchParams: Promi
                       <p className="truncate text-sm text-suave">
                         {t.servicio}, con {t.profesional}
                       </p>
+                      <Sena t={t} />
                     </div>
                     <span className={`self-start rounded-full px-2.5 py-1 text-xs font-semibold ${ESTILO[t.estado]}`}>
                       {ETIQUETA[t.estado]}
@@ -222,7 +233,8 @@ export default async function AgendaPage({ searchParams }: { searchParams: Promi
 
                   <div className="space-y-3 pb-4 pl-[5.25rem] pr-5">
                     <p className="text-sm text-suave">
-                      {pesos.format(Number(t.precio))}, celular {t.telefono}
+                      {pesos.format(Number(t.precio))}
+                      {t.sena_pagada && `, ${pesos.format(Number(t.sena))} de seña`}, celular {t.telefono}
                     </p>
                     {t.notas && <p className="rounded-xl bg-fondo px-3 py-2 text-sm">{t.notas}</p>}
                     {t.estado === "cancelado" && (t.cancelado_por || t.devolucion) && (
@@ -293,4 +305,23 @@ export default async function AgendaPage({ searchParams }: { searchParams: Promi
       </Link>
     </main>
   );
+}
+
+// Cómo está la seña del turno, debajo del servicio. Los cargados a mano no tienen seña y no muestran nada.
+function Sena({ t }: { t: TurnoAgenda }) {
+  const precio = Number(t.precio);
+  const saldo = Math.max(precio - Number(t.sena), 0);
+
+  if (t.estado === "pendiente" && t.vence) {
+    return <p className="text-sm font-medium text-amber-300">Esperando la seña, vence a las {t.vence}</p>;
+  }
+  if (t.estado !== "confirmado") return null;
+  if (t.sena_pagada) {
+    return <p className="text-sm font-medium text-acento">Seña pagada, cobrar {pesos.format(saldo)}</p>;
+  }
+  if (t.devolucion) {
+    // Se reactivó después de devolverle la seña: paga todo en el local
+    return <p className="text-sm font-medium text-amber-300">Seña devuelta, cobrar {pesos.format(precio)}</p>;
+  }
+  return null;
 }
