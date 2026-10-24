@@ -22,7 +22,10 @@ export async function POST(req: NextRequest) {
 
   // Si viene firmada, la firma tiene que ser válida. Igual el pago se consulta a Mercado Pago antes de tocar nada.
   const firma = req.headers.get("x-signature");
-  if (firma && !firmaWebhookValida(firma, req.headers.get("x-request-id"), q.get("data.id") ?? pagoId)) {
+  const firmaValida = !!firma && firmaWebhookValida(firma, req.headers.get("x-request-id"), q.get("data.id") ?? pagoId);
+  // TEMPORAL: para ver en los logs de Coolify si el webhook real viene firmado. Sacar después de las pruebas.
+  console.log(`Webhook de Mercado Pago: pago ${pagoId}, firma ${firma ? (firmaValida ? "válida" : "inválida") : "ausente"}`);
+  if (firma && !firmaValida) {
     console.error(`Webhook de Mercado Pago con firma inválida (pago ${pagoId})`);
     return NextResponse.json({ error: "Firma inválida" }, { status: 401 });
   }
