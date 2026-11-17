@@ -1,36 +1,70 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Turnera — Sistema de Turnos para Peluquería
 
-## Getting Started
+App de gestión de turnos construida para **The King Black Barber**, con PWA para clientes, panel del personal y pago de seña por MercadoPago.
 
-First, run the development server:
+**Demo en vivo:** [turnera-opal.vercel.app](https://turnera-opal.vercel.app)
+
+---
+
+## Funcionalidades
+
+- **PWA para clientes** — se instala desde el navegador; los clientes consultan disponibilidad y reservan turno
+- **Panel del personal** — dashboard con login, agenda diaria y semanal
+- **Gestión de turnos** — crear, reprogramar y cancelar turnos en tiempo real
+- **Seña con MercadoPago** — el cliente paga una seña al reservar (OAuth + webhooks)
+- **Dos apps instalables** — experiencias separadas para el cliente y la peluquería
+- **Identidad visual propia** — diseñada para The King Black Barber
+
+## Stack
+
+| Capa | Tecnología |
+|---|---|
+| Framework | Next.js 14 (App Router) |
+| Lenguaje | TypeScript |
+| Base de datos | PostgreSQL |
+| Contenedores | Docker |
+| Pagos | MercadoPago (OAuth, Webhooks) |
+| Deploy | Vercel |
+
+## Correr en local
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+cp .env.example .env.local   # completar DATABASE_URL, credenciales MP y AUTH_SECRET
+docker compose up -d db      # levantar Postgres
+npm install
+npm run dev                  # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+> Si ya tenías la base de una versión anterior, reseteala:
+> ```bash
+> docker compose down -v && docker compose up -d db
+> ```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Estructura del proyecto
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```
+app/              Páginas (Next.js App Router)
+components/       Componentes compartidos
+db/               Schema y migraciones
+lib/              Acceso a datos y helpers de auth
+public/           Assets estáticos y manifest PWA
+scripts/          Scripts de seed y utilidades
+types/            Tipos TypeScript compartidos
+middleware.ts     Middleware de autenticación
+docker-compose.yml
+```
 
-## Learn More
+## Variables de entorno
 
-To learn more about Next.js, take a look at the following resources:
+| Variable | Descripción |
+|---|---|
+| `DATABASE_URL` | Cadena de conexión a PostgreSQL |
+| `AUTH_SECRET` | Clave para tokens de sesión (`openssl rand -base64 32`) |
+| `MP_CLIENT_ID` | Client ID de la app de MercadoPago |
+| `MP_CLIENT_SECRET` | Client Secret de MercadoPago |
+| `MP_WEBHOOK_SECRET` | Clave de firma del webhook |
+| `NEXT_PUBLIC_URL` | URL pública de la app |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+---
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Desarrollado por [Diego Pistorio](https://github.com/DiegoPistorio)
