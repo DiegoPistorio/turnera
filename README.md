@@ -21,9 +21,8 @@ App de gestión de turnos construida para **The King Black Barber**, con PWA par
 | Framework | Next.js 15.5 (App Router) |
 | Lenguaje | TypeScript |
 | Base de datos | PostgreSQL |
-| Contenedores | Coolify |
 | Pagos | MercadoPago (OAuth, Webhooks) |
-| Deploy | Vercel |
+| Deploy | Coolify |
 
 ## Correr en local
 
