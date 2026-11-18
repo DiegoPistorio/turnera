@@ -2,7 +2,6 @@
 
 App de gestión de turnos construida para **The King Black Barber**, con PWA para clientes, panel del personal y pago de seña por MercadoPago.
 
-**Demo en vivo:** [turnera-opal.vercel.app](https://turnera-opal.vercel.app)
 
 ---
 
